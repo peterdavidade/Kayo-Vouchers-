@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kayo Vouchers — Buy Checker Vouchers Instantly</title>
+    <meta
+      name="description"
+      content="Buy BECE & WASSCE checker vouchers and university vouchers instantly. Fast delivery, secure payment, instant access."
+    />
+    <link rel="stylesheet" href="style.css" />
+    <script defer src="script.js"></script>
+  </head>
+
+  <body>
+    <!-- Top navigation -->
+    <header class="site-header">
+      <nav class="nav container" aria-label="Primary">
+        <a class="logo" href="index.html#home" aria-label="Kayo Vouchers Home">
+          <span class="logo-mark" aria-hidden="true">K</span>
+          <span class="logo-text">Kayo Vouchers</span>
+        </a>
+
+        <button class="nav-toggle" type="button" aria-label="Open menu" data-nav-toggle>
+          <span class="nav-toggle-bar" aria-hidden="true"></span>
+          <span class="nav-toggle-bar" aria-hidden="true"></span>
+          <span class="nav-toggle-bar" aria-hidden="true"></span>
+        </button>
+
+        <div class="nav-links" data-nav-links>
+          <a href="index.html#home">Home</a>
+          <a href="index.html#products">Products</a>
+          <a href="login.html" data-auth-link>Login</a>
+
+          <!-- Dark/Light mode toggle (sun/moon) -->
+          <button class="icon-btn" type="button" aria-label="Toggle dark mode" data-theme-toggle>
+            <span class="theme-icon" aria-hidden="true" data-theme-icon>☾</span>
+          </button>
+
+          <!-- Logged-in state (filled by JS) -->
+          <div class="nav-user" data-nav-user hidden>
+            <span class="nav-user-text" data-nav-user-text></span>
+            <button class="btn btn-ghost btn-sm" type="button" data-logout>Logout</button>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main id="home">
+      <!-- HERO (Above the fold) -->
+      <section class="hero">
+        <div class="container hero-grid">
+          <div class="hero-copy">
+            <p class="badge">Instant vouchers • 24/7 access</p>
+            <h1>Buy BECE &amp; WASSCE Checker Vouchers Instantly</h1>
+            <p class="subheading">
+              Get your voucher code in seconds with a clean, secure checkout flow. No delays. No stress.
+            </p>
+            <div class="hero-actions">
+              <button class="btn btn-primary" type="button" data-action="get-started">Buy Now</button>
+              <a class="btn btn-ghost" href="#products">View Products</a>
+            </div>
+            <p class="microcopy">
+              Tip: Create an account once, then buy vouchers in one click next time.
+            </p>
+          </div>
+
+          <div class="hero-card" role="presentation">
+            <div class="hero-card-inner">
+              <h2 class="hero-card-title">What you get</h2>
+              <ul class="checklist" aria-label="Benefits">
+                <li>Real voucher codes delivered instantly</li>
+                <li>Simple login &amp; OTP verification</li>
+                <li>Works on mobile and desktop</li>
+              </ul>
+              <div class="hero-card-cta">
+                <button class="btn btn-primary btn-block" type="button" data-action="get-started">
+                  Get Started
+                </button>
+                <p class="microcopy">Secure, fast, and beginner-friendly.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PRODUCTS -->
+      <section class="section" id="products">
+        <div class="container">
+          <div class="section-head">
+            <h2>Popular Products</h2>
+            <p>Choose a voucher and get instant access after checkout.</p>
+          </div>
+
+          <div class="grid cards">
+            <article class="card product" data-product="bece">
+              <div class="card-body">
+                <h3>BECE Checker</h3>
+                <p class="muted">Check your BECE results quickly with an instant voucher code.</p>
+                <div class="price-row">
+                  <span class="price">₵ 15.00</span>
+                  <span class="pill">Instant</span>
+                </div>
+              </div>
+              <div class="card-actions">
+                <button class="btn btn-primary btn-block" type="button" data-buy>
+                  Buy Now
+                </button>
+              </div>
+            </article>
+
+            <article class="card product" data-product="wassce">
+              <div class="card-body">
+                <h3>WASSCE Checker</h3>
+                <p class="muted">Get your WASSCE voucher in seconds—no queues, no waiting.</p>
+                <div class="price-row">
+                  <span class="price">₵ 25.00</span>
+                  <span class="pill">Fast</span>
+                </div>
+              </div>
+              <div class="card-actions">
+                <button class="btn btn-primary btn-block" type="button" data-buy>
+                  Buy Now
+                </button>
+              </div>
+            </article>
+
+            <article class="card product" data-product="university">
+              <div class="card-body">
+                <h3>University Voucher</h3>
+                <p class="muted">Purchase application vouchers for selected universities instantly.</p>
+                <div class="price-row">
+                  <span class="price">₵ 200.00</span>
+                  <span class="pill">Secure</span>
+                </div>
+              </div>
+              <div class="card-actions">
+                <button class="btn btn-primary btn-block" type="button" data-buy>
+                  Buy Now
+                </button>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- TRUST -->
+      <section class="section section-alt" aria-label="Trust">
+        <div class="container">
+          <div class="trust">
+            <div class="trust-item">
+              <span class="trust-icon" aria-hidden="true">⚡</span>
+              <div>
+                <h3>Fast Delivery</h3>
+                <p class="muted">Your voucher code appears instantly after purchase.</p>
+              </div>
+            </div>
+            <div class="trust-item">
+              <span class="trust-icon" aria-hidden="true">🔒</span>
+              <div>
+                <h3>Secure Payment</h3>
+                <p class="muted">A clean and safe checkout experience (demo).</p>
+              </div>
+            </div>
+            <div class="trust-item">
+              <span class="trust-icon" aria-hidden="true">✅</span>
+              <div>
+                <h3>Instant Access</h3>
+                <p class="muted">Buy and access your voucher anytime, anywhere.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="container footer-inner">
+        <div>
+          <div class="footer-title">Contact</div>
+          <div class="muted">Email: support@kayovouchers.test</div>
+          <div class="muted">Phone: +233 000 000 000</div>
+        </div>
+        <div class="muted">© <span data-year></span> Kayo Vouchers. All rights reserved.</div>
+      </div>
+    </footer>
+
+    <!-- Simple toast (used for “Buy Now” feedback) -->
+    <div class="toast" role="status" aria-live="polite" aria-atomic="true" hidden data-toast></div>
+  </body>
+</html>
