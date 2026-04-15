@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create Account &mdash; Kayo Vouchers</title>
+    <meta name="description" content="Create an account to buy vouchers instantly." />
+    <link rel="stylesheet" href="style.css" />
+    <script defer src="script.js"></script>
+  </head>
+
+  <body>
+    <header class="site-header">
+      <nav class="nav container" aria-label="Primary">
+        <a class="logo" href="index.html" aria-label="Kayo Vouchers Home">
+          <span class="logo-mark" aria-hidden="true">K</span>
+          <span class="logo-text">Kayo Vouchers</span>
+        </a>
+
+        <div class="nav-links nav-links-simple">
+          <a href="index.html">Home</a>
+
+          <button class="icon-btn" type="button" aria-label="Toggle dark mode" data-theme-toggle>
+            <span class="theme-icon" aria-hidden="true" data-theme-icon>&#x263E;</span>
+          </button>
+
+          <div class="nav-user" data-nav-user hidden>
+            <span class="nav-user-text" data-nav-user-text></span>
+            <button class="btn btn-ghost btn-sm" type="button" data-logout>Logout</button>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="auth">
+      <div class="container auth-grid">
+        <section class="auth-intro">
+          <h1>Create your account</h1>
+          <p class="muted">Sign up once, then buy vouchers faster anytime.</p>
+          <ul class="checklist">
+            <li>OTP verification (simulated)</li>
+            <li>Use email or phone number</li>
+            <li>Mobile-friendly</li>
+          </ul>
+        </section>
+
+        <section class="card auth-card" aria-label="Sign up">
+          <div class="auth-body">
+            <div class="alert" role="status" aria-live="polite" hidden data-alert></div>
+
+            <!-- SIGNUP (step 1) -->
+            <form class="panel" data-auth="signup">
+              <div class="field">
+                <label for="signup-name">Name</label>
+                <input id="signup-name" name="name" type="text" placeholder="Your full name" autocomplete="name" required />
+              </div>
+
+              <div class="field">
+                <label for="signup-contact">Email or Phone</label>
+                <input
+                  id="signup-contact"
+                  name="contact"
+                  type="text"
+                  placeholder="Choose one (email or phone)"
+                  autocomplete="email"
+                  required
+                />
+                <div class="help muted">Use either email or phone number &mdash; your choice.</div>
+              </div>
+
+              <div class="field">
+                <label for="signup-password">Password</label>
+                <input
+                  id="signup-password"
+                  name="password"
+                  type="password"
+                  placeholder="Create a password"
+                  autocomplete="new-password"
+                  required
+                />
+              </div>
+
+              <div class="field">
+                <label for="signup-confirm">Confirm Password</label>
+                <input
+                  id="signup-confirm"
+                  name="confirm"
+                  type="password"
+                  placeholder="Confirm password"
+                  autocomplete="new-password"
+                  required
+                />
+              </div>
+
+              <button class="btn btn-primary btn-block" type="submit">Create Account</button>
+
+              <div class="panel-meta">
+                <a class="link" href="login.html">Already have an account? Login</a>
+              </div>
+            </form>
+
+            <!-- SIGNUP (step 2: OTP) -->
+            <form class="panel" data-auth="signup-otp" hidden>
+              <div class="field">
+                <label for="signup-otp">Enter OTP</label>
+                <input
+                  id="signup-otp"
+                  name="otp"
+                  type="text"
+                  inputmode="numeric"
+                  placeholder="4&ndash;6 digits"
+                  required
+                />
+                <!-- Demo hint: in a real app you would not show the OTP on screen -->
+                <div class="help muted" data-otp-hint></div>
+              </div>
+
+              <button class="btn btn-primary btn-block" type="submit">Verify &amp; Create</button>
+              <button class="btn btn-ghost btn-block" type="button" data-cancel-otp>Cancel</button>
+
+              <div class="panel-meta">
+                <a class="link" href="login.html">Back to Login</a>
+              </div>
+            </form>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="footer footer-simple">
+      <div class="container footer-inner">
+        <div class="muted">Need help? support@kayovouchers.test</div>
+        <div class="muted">&copy; <span data-year></span> Kayo Vouchers</div>
+      </div>
+    </footer>
+  </body>
+</html>
+

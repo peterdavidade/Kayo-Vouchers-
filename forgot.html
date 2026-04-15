@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reset Password &mdash; Kayo Vouchers</title>
+    <meta name="description" content="Reset your password using OTP verification (simulated)." />
+    <link rel="stylesheet" href="style.css" />
+    <script defer src="script.js"></script>
+  </head>
+
+  <body>
+    <header class="site-header">
+      <nav class="nav container" aria-label="Primary">
+        <a class="logo" href="index.html" aria-label="Kayo Vouchers Home">
+          <span class="logo-mark" aria-hidden="true">K</span>
+          <span class="logo-text">Kayo Vouchers</span>
+        </a>
+
+        <div class="nav-links nav-links-simple">
+          <a href="index.html">Home</a>
+
+          <button class="icon-btn" type="button" aria-label="Toggle dark mode" data-theme-toggle>
+            <span class="theme-icon" aria-hidden="true" data-theme-icon>&#x263E;</span>
+          </button>
+
+          <div class="nav-user" data-nav-user hidden>
+            <span class="nav-user-text" data-nav-user-text></span>
+            <button class="btn btn-ghost btn-sm" type="button" data-logout>Logout</button>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="auth">
+      <div class="container auth-grid">
+        <section class="auth-intro">
+          <h1>Forgot your password?</h1>
+          <p class="muted">No worries. Verify with an OTP, then set a new password.</p>
+          <ul class="checklist">
+            <li>OTP verification (simulated)</li>
+            <li>Reset in under a minute</li>
+            <li>Works on mobile</li>
+          </ul>
+        </section>
+
+        <section class="card auth-card" aria-label="Forgot password">
+          <div class="auth-body">
+            <div class="alert" role="status" aria-live="polite" hidden data-alert></div>
+
+            <!-- FORGOT (step 1) -->
+            <form class="panel" data-auth="forgot">
+              <div class="field">
+                <label for="forgot-contact">Email or Phone</label>
+                <input
+                  id="forgot-contact"
+                  name="contact"
+                  type="text"
+                  placeholder="Enter your email or phone"
+                  required
+                />
+              </div>
+              <button class="btn btn-primary btn-block" type="submit">Send OTP</button>
+
+              <div class="panel-meta">
+                <a class="link" href="login.html">Back to Login</a>
+              </div>
+            </form>
+
+            <!-- FORGOT (step 2: OTP + reset) -->
+            <form class="panel" data-auth="forgot-reset" hidden>
+              <div class="field">
+                <label for="forgot-otp">Enter OTP</label>
+                <input
+                  id="forgot-otp"
+                  name="otp"
+                  type="text"
+                  inputmode="numeric"
+                  placeholder="4&ndash;6 digits"
+                  required
+                />
+                <div class="help muted" data-forgot-otp-hint></div>
+              </div>
+
+              <div class="field">
+                <label for="forgot-password">New Password</label>
+                <input
+                  id="forgot-password"
+                  name="password"
+                  type="password"
+                  placeholder="Create a new password"
+                  autocomplete="new-password"
+                  required
+                />
+              </div>
+
+              <div class="field">
+                <label for="forgot-confirm">Confirm Password</label>
+                <input
+                  id="forgot-confirm"
+                  name="confirm"
+                  type="password"
+                  placeholder="Confirm new password"
+                  autocomplete="new-password"
+                  required
+                />
+              </div>
+
+              <button class="btn btn-primary btn-block" type="submit">Verify &amp; Reset</button>
+              <button class="btn btn-ghost btn-block" type="button" data-cancel-forgot>Cancel</button>
+
+              <div class="panel-meta">
+                <a class="link" href="login.html">Back to Login</a>
+              </div>
+            </form>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="footer footer-simple">
+      <div class="container footer-inner">
+        <div class="muted">Need help? support@kayovouchers.test</div>
+        <div class="muted">&copy; <span data-year></span> Kayo Vouchers</div>
+      </div>
+    </footer>
+  </body>
+</html>
+

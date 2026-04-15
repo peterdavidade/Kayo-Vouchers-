@@ -470,6 +470,10 @@ input:focus,
   background: color-mix(in oklab, var(--surface-2), transparent 0%);
 }
 
+.tabs.tabs-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
 .tab {
   border: none;
   background: transparent;
@@ -636,4 +640,3 @@ input::placeholder {
     padding-left: 0;
   }
 }
-

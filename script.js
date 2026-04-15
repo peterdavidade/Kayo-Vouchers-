@@ -105,7 +105,7 @@ function updateThemeIcon(theme) {
   const icon = document.querySelector("[data-theme-icon]");
   if (!icon) return;
   // Light theme shows moon (switch to dark). Dark theme shows sun (switch to light).
-  icon.textContent = theme === "dark" ? "☀" : "☾";
+  icon.textContent = theme === "dark" ? "\u2600" : "\u263E";
 }
 
 // ---------- UI helpers ----------
@@ -141,19 +141,11 @@ function clearAlert() {
   alert.classList.remove("is-error");
 }
 
-function setPanel(name) {
-  // Used only on login.html (auth panels)
-  const panels = $all("[data-panel]");
+function setAuthPanel(name) {
+  // Used on signup.html and forgot.html (and any auth pages using data-auth panels)
+  const panels = $all("[data-auth]");
   if (panels.length === 0) return;
-  panels.forEach((p) => (p.hidden = p.getAttribute("data-panel") !== name));
-
-  // Update tabs (if present)
-  const tabForPanel = name === "signup-otp" ? "signup" : name === "forgot-reset" ? "forgot" : name;
-  $all("[data-tab]").forEach((t) => {
-    const isActive = t.getAttribute("data-tab") === tabForPanel;
-    t.classList.toggle("is-active", isActive);
-    t.setAttribute("aria-selected", isActive ? "true" : "false");
-  });
+  panels.forEach((p) => (p.hidden = p.getAttribute("data-auth") !== name));
 }
 
 function updateNavAuthState() {
@@ -251,8 +243,8 @@ function initLanding() {
 
 // ---------- Auth page: login/signup/forgot flows ----------
 function initAuth() {
-  const isAuthPage = document.body.classList.contains("auth") || document.querySelector(".auth-card");
-  if (!isAuthPage) return;
+  const hasAuthPanels = document.querySelector("[data-auth]");
+  if (!hasAuthPanels) return;
 
   // If already logged in, redirect to landing page for convenience.
   if (getCurrentUser()) {
@@ -260,41 +252,23 @@ function initAuth() {
     return;
   }
 
-  // Tabs
-  $all("[data-tab]").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      clearAlert();
-      setPanel(tab.getAttribute("data-tab") || "login");
-    });
-  });
-
-  // "Forgot Password?" link under login
-  const openForgot = document.querySelector("[data-open-forgot]");
-  if (openForgot) {
-    openForgot.addEventListener("click", (e) => {
-      e.preventDefault();
-      clearAlert();
-      setPanel("forgot");
-    });
-  }
-
-  // Resume any pending flows (if user refreshed the page)
+  // Resume any pending OTP steps (refresh-friendly)
   const pendingSignup = readStorage(STORAGE_KEYS.pendingSignup, null);
-  if (pendingSignup?.otp) {
+  if (pendingSignup?.otp && document.querySelector('[data-auth="signup-otp"]')) {
     const hint = document.querySelector("[data-otp-hint]");
     if (hint) hint.textContent = `Demo OTP: ${pendingSignup.otp}`;
-    setPanel("signup-otp");
+    setAuthPanel("signup-otp");
   }
 
   const pendingForgot = readStorage(STORAGE_KEYS.pendingForgot, null);
-  if (pendingForgot?.otp) {
+  if (pendingForgot?.otp && document.querySelector('[data-auth="forgot-reset"]')) {
     const hint = document.querySelector("[data-forgot-otp-hint]");
     if (hint) hint.textContent = `Demo OTP: ${pendingForgot.otp}`;
-    setPanel("forgot-reset");
+    setAuthPanel("forgot-reset");
   }
 
-  // LOGIN submit
-  const loginForm = document.querySelector('[data-panel="login"]');
+  // LOGIN submit (login.html)
+  const loginForm = document.querySelector('[data-auth="login"]');
   loginForm?.addEventListener("submit", (e) => {
     e.preventDefault();
     clearAlert();
@@ -313,8 +287,8 @@ function initAuth() {
     location.href = "index.html";
   });
 
-  // SIGNUP submit (step 1)
-  const signupForm = document.querySelector('[data-panel="signup"]');
+  // SIGNUP submit (signup.html - step 1)
+  const signupForm = document.querySelector('[data-auth="signup"]');
   signupForm?.addEventListener("submit", (e) => {
     e.preventDefault();
     clearAlert();
@@ -342,12 +316,11 @@ function initAuth() {
     const exists = getAccounts().some((a) => a.contactNormalized === contactNormalized);
     if (exists) {
       showAlert("An account with that email/phone already exists. Please login instead.", "error");
-      setPanel("login");
+      window.setTimeout(() => (location.href = "login.html"), 800);
       return;
     }
 
     const otp = generateOtp();
-    // Store pending signup in localStorage so refresh won't break the demo flow.
     writeStorage(STORAGE_KEYS.pendingSignup, {
       name,
       contact,
@@ -359,12 +332,12 @@ function initAuth() {
 
     const hint = document.querySelector("[data-otp-hint]");
     if (hint) hint.textContent = `Demo OTP: ${otp}`;
-    setPanel("signup-otp");
+    setAuthPanel("signup-otp");
     showAlert("We sent an OTP to your contact (simulated). Enter it below to finish signup.");
   });
 
-  // SIGNUP OTP submit (step 2)
-  const signupOtpForm = document.querySelector('[data-panel="signup-otp"]');
+  // SIGNUP OTP submit (signup.html - step 2)
+  const signupOtpForm = document.querySelector('[data-auth="signup-otp"]');
   signupOtpForm?.addEventListener("submit", (e) => {
     e.preventDefault();
     clearAlert();
@@ -372,7 +345,7 @@ function initAuth() {
     const pending = readStorage(STORAGE_KEYS.pendingSignup, null);
     if (!pending?.otp) {
       showAlert("No pending signup found. Please try signing up again.", "error");
-      setPanel("signup");
+      setAuthPanel("signup");
       return;
     }
 
@@ -406,11 +379,11 @@ function initAuth() {
   cancelOtp?.addEventListener("click", () => {
     localStorage.removeItem(STORAGE_KEYS.pendingSignup);
     clearAlert();
-    setPanel("signup");
+    setAuthPanel("signup");
   });
 
-  // FORGOT submit (step 1)
-  const forgotForm = document.querySelector('[data-panel="forgot"]');
+  // FORGOT submit (forgot.html - step 1)
+  const forgotForm = document.querySelector('[data-auth="forgot"]');
   forgotForm?.addEventListener("submit", (e) => {
     e.preventDefault();
     clearAlert();
@@ -433,12 +406,12 @@ function initAuth() {
 
     const hint = document.querySelector("[data-forgot-otp-hint]");
     if (hint) hint.textContent = `Demo OTP: ${otp}`;
-    setPanel("forgot-reset");
+    setAuthPanel("forgot-reset");
     showAlert("OTP generated (simulated). Enter it below to reset your password.");
   });
 
-  // FORGOT reset submit (step 2)
-  const forgotResetForm = document.querySelector('[data-panel="forgot-reset"]');
+  // FORGOT reset submit (forgot.html - step 2)
+  const forgotResetForm = document.querySelector('[data-auth="forgot-reset"]');
   forgotResetForm?.addEventListener("submit", (e) => {
     e.preventDefault();
     clearAlert();
@@ -446,7 +419,7 @@ function initAuth() {
     const pending = readStorage(STORAGE_KEYS.pendingForgot, null);
     if (!pending?.otp || !pending?.userId) {
       showAlert("No pending reset found. Please request a new OTP.", "error");
-      setPanel("forgot");
+      setAuthPanel("forgot");
       return;
     }
 
@@ -473,7 +446,7 @@ function initAuth() {
     if (idx === -1) {
       showAlert("Account no longer exists. Please sign up again.", "error");
       localStorage.removeItem(STORAGE_KEYS.pendingForgot);
-      setPanel("signup");
+      window.setTimeout(() => (location.href = "signup.html"), 900);
       return;
     }
 
@@ -482,7 +455,7 @@ function initAuth() {
     localStorage.removeItem(STORAGE_KEYS.pendingForgot);
 
     showAlert("Password reset successful. You can now login.");
-    setPanel("login");
+    window.setTimeout(() => (location.href = "login.html"), 900);
   });
 
   // Cancel forgot reset
@@ -490,7 +463,7 @@ function initAuth() {
   cancelForgot?.addEventListener("click", () => {
     localStorage.removeItem(STORAGE_KEYS.pendingForgot);
     clearAlert();
-    setPanel("forgot");
+    setAuthPanel("forgot");
   });
 }
 
@@ -533,4 +506,3 @@ document.addEventListener("DOMContentLoaded", () => {
   initLanding();
   initAuth();
 });
-
