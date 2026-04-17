@@ -6,6 +6,9 @@
     <title>Login &mdash; Kayo Vouchers</title>
     <meta name="description" content="Login or create an account to buy vouchers instantly." />
     <link rel="stylesheet" href="style.css" />
+    <!-- CHANGE: Firebase (CDN) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-auth-compat.js"></script>
     <script defer src="script.js"></script>
   </head>
 
@@ -13,7 +16,7 @@
     <header class="site-header">
       <nav class="nav container" aria-label="Primary">
         <a class="logo" href="index.html" aria-label="Kayo Vouchers Home">
-          <span class="logo-mark" aria-hidden="true">K</span>
+          <!-- CHANGE: Removed the "K" logo mark -->
           <span class="logo-text">Kayo Vouchers</span>
         </a>
 
@@ -26,7 +29,7 @@
 
           <div class="nav-user" data-nav-user hidden>
             <span class="nav-user-text" data-nav-user-text></span>
-            <button class="btn btn-ghost btn-sm" type="button" data-logout>Logout</button>
+            <!-- CHANGE: Logout button is injected by JS ONLY when logged in -->
           </div>
         </div>
       </nav>
@@ -37,11 +40,12 @@
         <section class="auth-intro">
           <h1>Welcome back</h1>
           <p class="muted">
-            Login to buy vouchers faster, track your recent purchases (demo), and get instant delivery.
+            Login to buy vouchers faster and get instant delivery.
           </p>
           <ul class="checklist">
-            <li>Saved login state with localStorage</li>
-            <li>Clean, beginner-friendly UI</li>
+            <!-- CHANGE: Updated copy (Firebase auth) -->
+            <li>Secure login with Firebase</li>
+            <li>Email verification supported</li>
           </ul>
         </section>
 
@@ -50,16 +54,16 @@
             <!-- Shared message box -->
             <div class="alert" role="status" aria-live="polite" hidden data-alert></div>
 
-            <!-- LOGIN (only) -->
-            <form class="panel" data-auth="login">
+            <!-- CHANGE: LOGIN (Email) -->
+            <form class="panel" data-auth="login-email">
               <div class="field">
-                <label for="login-identifier">Email or Phone</label>
+                <label for="login-email">Email</label>
                 <input
-                  id="login-identifier"
-                  name="identifier"
-                  type="text"
-                  placeholder="e.g. user@email.com or 0550000000"
-                  autocomplete="username"
+                  id="login-email"
+                  name="email"
+                  type="email"
+                  placeholder="e.g. user@email.com"
+                  autocomplete="email"
                   required
                 />
               </div>
@@ -90,7 +94,7 @@
 
     <footer class="footer footer-simple">
       <div class="container footer-inner">
-        <div class="muted">Need help? support@kayovouchers.test</div>
+        <div class="muted">Need help? info.karyocodes@gmail.com</div>
         <div class="muted">&copy; <span data-year></span> Kayo Vouchers</div>
       </div>
     </footer>

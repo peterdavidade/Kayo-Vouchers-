@@ -8,7 +8,12 @@
       name="description"
       content="Buy BECE & WASSCE checker vouchers and university vouchers instantly. Fast delivery, secure payment, instant access."
     />
+    <div class="hero-bg" aria-hidden="true" style="background-image: url('https://waecgambia.org/wp-content/uploads/2025/06/510-x-600-WASSCE.png');"></div>
+
     <link rel="stylesheet" href="style.css" />
+    <!-- CHANGE: Firebase (CDN) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-auth-compat.js"></script>
     <script defer src="script.js"></script>
   </head>
 
@@ -17,38 +22,67 @@
     <header class="site-header">
       <nav class="nav container" aria-label="Primary">
         <a class="logo" href="index.html#home" aria-label="Kayo Vouchers Home">
-          <span class="logo-mark" aria-hidden="true">K</span>
+          <!-- CHANGE: Removed the "K" logo mark (per request) -->
           <span class="logo-text">Kayo Vouchers</span>
         </a>
 
-        <button class="nav-toggle" type="button" aria-label="Open menu" data-nav-toggle>
-          <span class="nav-toggle-bar" aria-hidden="true"></span>
-          <span class="nav-toggle-bar" aria-hidden="true"></span>
-          <span class="nav-toggle-bar" aria-hidden="true"></span>
-        </button>
+        <div class="nav-right">
+          <div class="nav-links" data-nav-links>
+            <a href="index.html#home">Home</a>
+            <a href="index.html#products">Products</a>
+            <!-- CHANGE: Auth control (top right). JS toggles Login/Logout using Firebase onAuthStateChanged() -->
+            <a class="btn btn-ghost btn-sm" href="login.html" data-auth-link>Login</a>
 
-        <div class="nav-links" data-nav-links>
-          <a href="index.html#home">Home</a>
-          <a href="index.html#products">Products</a>
-          <a href="login.html" data-auth-link>Login</a>
+            <!-- Logged-in state (filled by JS) -->
+            <div class="nav-user" data-nav-user hidden>
+              <span class="nav-user-text" data-nav-user-text></span>
+              <!-- CHANGE: Logout button is injected by JS ONLY when logged in -->
+            </div>
+          </div>
 
-          <!-- Dark/Light mode toggle (sun/moon) -->
-          <button class="icon-btn" type="button" aria-label="Toggle dark mode" data-theme-toggle>
-            <span class="theme-icon" aria-hidden="true" data-theme-icon>&#x263E;</span>
-          </button>
-
-          <!-- Logged-in state (filled by JS) -->
-          <div class="nav-user" data-nav-user hidden>
-            <span class="nav-user-text" data-nav-user-text></span>
-            <button class="btn btn-ghost btn-sm" type="button" data-logout>Logout</button>
+          <!-- NEW: Actions (theme + hamburger) appear after Login -->
+          <div class="nav-actions">
+            <button class="icon-btn" type="button" aria-label="Toggle dark mode" data-theme-toggle>
+              <span class="theme-icon" aria-hidden="true" data-theme-icon>&#x263E;</span>
+            </button>
+            <button class="nav-toggle" type="button" aria-label="Open menu" aria-expanded="false" data-menu-toggle>
+              &#9776;
+            </button>
           </div>
         </div>
       </nav>
     </header>
 
+    <!-- NEW: Mobile side menu + overlay -->
+    <div class="menu-overlay" data-menu-overlay aria-hidden="true"></div>
+    <aside class="side-menu" data-side-menu aria-hidden="true" aria-label="Mobile menu">
+      <div class="side-menu-head">
+        <div class="side-menu-title">Menu</div>
+        <button class="icon-btn" type="button" aria-label="Close menu" data-menu-close>&times;</button>
+      </div>
+      <div class="side-menu-links">
+        <a href="index.html#home" data-menu-link>Home</a>
+        <a href="index.html#products" data-menu-link>Products</a>
+        <a href="login.html" data-auth-link data-menu-link>Login</a>
+
+        <!-- NEW: Logged-in state inside side menu (JS injects Logout button here) -->
+        <div class="side-menu-user" data-nav-user hidden>
+          <div class="muted" data-nav-user-text></div>
+        </div>
+      </div>
+    </aside>
+
     <main id="home">
       <!-- HERO (Above the fold) -->
       <section class="hero">
+        <!-- CHANGE: Hero background image hook (paste image URL inside url('...') below) -->
+        <!-- NOTE: This is VISUAL ONLY. Meta description stays unchanged for SEO. -->
+        <!-- CHANGE: Hero background image (behind text) -->
+        <div
+          class="hero-bg"
+          aria-hidden="true"
+          style="background-image: url('https://www.myjoyonline.com/wp-content/uploads/2026/03/Screenshot-2026-03-30-at-4.29.10-AM-696x424.png');"
+        ></div>
         <div class="container hero-grid">
           <div class="hero-copy">
             <p class="badge">Instant vouchers • 24/7 access</p>
@@ -70,7 +104,7 @@
               <h2 class="hero-card-title">What you get</h2>
               <ul class="checklist" aria-label="Benefits">
                 <li>Real voucher codes delivered instantly</li>
-                <li>Simple login &amp; OTP verification</li>
+                <li>Simple login &amp; email verification</li>
                 <li>Works on mobile and desktop</li>
               </ul>
               <div class="hero-card-cta">
@@ -179,8 +213,8 @@
       <div class="container footer-inner">
         <div>
           <div class="footer-title">Contact</div>
-          <div class="muted">Email: support@kayovouchers.test</div>
-          <div class="muted">Phone: +233 000 000 000</div>
+          <div class="muted">Email: info.karyocodes@gmail.com</div>
+          <div class="muted">Phone:  0209816129</div>
         </div>
         <div class="muted">&copy; <span data-year></span> Kayo Vouchers. All rights reserved.</div>
       </div>
@@ -188,5 +222,58 @@
 
     <!-- Simple toast (used for “Buy Now” feedback) -->
     <div class="toast" role="status" aria-live="polite" aria-atomic="true" hidden data-toast></div>
+
+    <!-- NEW: Order modal (Buy Now → popup) -->
+    <div class="modal-overlay" data-modal-overlay aria-hidden="true">
+      <div class="modal" role="dialog" aria-modal="true" aria-label="Place your order">
+        <button class="modal-close" type="button" aria-label="Close modal" data-modal-close>&times;</button>
+
+        <h2 class="modal-title">Order</h2>
+        <p class="modal-subtitle muted">Confirm details, then proceed.</p>
+
+        <div class="modal-summary">
+          <div class="summary-row">
+            <span class="muted">Product</span>
+            <span class="summary-strong" data-order-product>—</span>
+          </div>
+          <div class="summary-row">
+            <span class="muted">Price</span>
+            <span class="summary-strong" data-order-price>—</span>
+          </div>
+          <div class="summary-row">
+            <span class="muted">Total</span>
+            <span class="summary-strong" data-order-total>—</span>
+          </div>
+        </div>
+
+        <form class="modal-form" data-order-form>
+          <!-- NEW: Quantity selector -->
+          <div class="field">
+            <label>Quantity</label>
+            <div class="qty">
+              <button class="qty-btn" type="button" aria-label="Decrease quantity" data-qty-minus>-</button>
+              <div class="qty-value" aria-live="polite" data-qty-value>1</div>
+              <button class="qty-btn" type="button" aria-label="Increase quantity" data-qty-plus>+</button>
+            </div>
+          </div>
+
+          <!-- NEW: Phone (required) -->
+          <div class="field">
+            <label for="order-phone">Phone number (required)</label>
+            <input id="order-phone" name="phone" type="tel" placeholder="e.g. 0200000000" autocomplete="tel" required />
+            <div class="field-error" hidden data-error-phone></div>
+          </div>
+
+          <!-- NEW: Email (optional) -->
+          <div class="field">
+            <label for="order-email">Email (optional)</label>
+            <input id="order-email" name="email" type="email" placeholder="e.g. user@email.com" autocomplete="email" />
+            <div class="field-error" hidden data-error-email></div>
+          </div>
+
+          <button class="btn btn-primary btn-block" type="submit">Proceed</button>
+        </form>
+      </div>
+    </div>
   </body>
 </html>

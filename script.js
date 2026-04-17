@@ -1,19 +1,8 @@
 /* =========================================================
-   Kayo Vouchers — Vanilla JS (localStorage demo auth)
-   Notes:
-   - This is a front-end-only demo. In real apps, NEVER store
-     passwords or OTPs in localStorage. Use a secure backend.
+   Kayo Vouchers — Vanilla JS + Firebase Authentication (CDN)
+   - Email/Password auth + Email verification
+   - No demo accounts, no passwords/OTPs stored in localStorage
    ========================================================= */
-
-// ---------- LocalStorage keys ----------
-const STORAGE_KEYS = {
-  accounts: "kayo_accounts",
-  session: "kayo_session",
-  theme: "kayo_theme",
-  pendingSignup: "kayo_pending_signup",
-  pendingForgot: "kayo_pending_forgot",
-  purchases: "kayo_purchases" // demo purchase history per user
-};
 
 // ---------- Small helpers ----------
 function $(selector, root = document) {
@@ -24,79 +13,15 @@ function $all(selector, root = document) {
   return Array.from(root.querySelectorAll(selector));
 }
 
-function safeJsonParse(value, fallback) {
-  try {
-    return value ? JSON.parse(value) : fallback;
-  } catch {
-    return fallback;
-  }
-}
+// ---------- Theme (OK to persist client-side) ----------
+const THEME_KEY = "kayo_theme";
 
-function readStorage(key, fallback) {
-  return safeJsonParse(localStorage.getItem(key), fallback);
-}
-
-function writeStorage(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
-}
-
-function normalizeIdentifier(raw) {
-  const trimmed = String(raw || "").trim();
-  // If it looks like an email, lower-case it. Otherwise treat as phone-ish and remove spaces.
-  if (trimmed.includes("@")) return trimmed.toLowerCase();
-  return trimmed.replace(/\s+/g, "");
-}
-
-function generateOtp() {
-  // Random 6-digit OTP (000000–999999), padded to 6 digits.
-  return String(Math.floor(Math.random() * 1_000_000)).padStart(6, "0");
-}
-
-function createId() {
-  // Good enough for a demo.
-  return `u_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-}
-
-// ---------- Accounts + session ----------
-function getAccounts() {
-  return readStorage(STORAGE_KEYS.accounts, []);
-}
-
-function setAccounts(accounts) {
-  writeStorage(STORAGE_KEYS.accounts, accounts);
-}
-
-function findAccountByIdentifier(identifier) {
-  const needle = normalizeIdentifier(identifier);
-  return getAccounts().find((a) => a.contactNormalized === needle) || null;
-}
-
-function getSession() {
-  return readStorage(STORAGE_KEYS.session, null);
-}
-
-function setSession(session) {
-  writeStorage(STORAGE_KEYS.session, session);
-}
-
-function clearSession() {
-  localStorage.removeItem(STORAGE_KEYS.session);
-}
-
-function getCurrentUser() {
-  const session = getSession();
-  if (!session?.userId) return null;
-  const accounts = getAccounts();
-  return accounts.find((a) => a.id === session.userId) || null;
-}
-
-// ---------- Theme ----------
 function getTheme() {
-  return localStorage.getItem(STORAGE_KEYS.theme) || "light";
+  return localStorage.getItem(THEME_KEY) || "light";
 }
 
 function setTheme(theme) {
-  localStorage.setItem(STORAGE_KEYS.theme, theme);
+  localStorage.setItem(THEME_KEY, theme);
   document.documentElement.setAttribute("data-theme", theme);
   updateThemeIcon(theme);
 }
@@ -142,38 +67,187 @@ function clearAlert() {
 }
 
 function setAuthPanel(name) {
-  // Used on signup.html and forgot.html (and any auth pages using data-auth panels)
+  // Used on login/signup/forgot pages (any page using data-auth panels)
   const panels = $all("[data-auth]");
   if (panels.length === 0) return;
   panels.forEach((p) => (p.hidden = p.getAttribute("data-auth") !== name));
 }
 
-function updateNavAuthState() {
-  const user = getCurrentUser();
-  const navUser = document.querySelector("[data-nav-user]");
-  const navUserText = document.querySelector("[data-nav-user-text]");
-  const authLink = document.querySelector("[data-auth-link]");
+function mapFirebaseAuthError(error) {
+  const code = String(error?.code || "");
+  if (code === "auth/invalid-email") return "Please enter a valid email address.";
+  if (code === "auth/user-not-found") return "No account found with that email. Please sign up.";
+  if (code === "auth/wrong-password") return "Incorrect password. Please try again.";
+  if (code === "auth/email-already-in-use") return "That email is already in use. Please login instead.";
+  if (code === "auth/weak-password") return "Password is too weak. Use at least 6 characters.";
+  if (code === "auth/too-many-requests") return "Too many attempts. Please wait a moment and try again.";
+  return error?.message || "Something went wrong. Please try again.";
+}
 
-  if (user) {
-    if (navUser) navUser.hidden = false;
-    if (navUserText) navUserText.textContent = `Welcome, ${user.name.split(" ")[0]}`;
-    if (authLink) authLink.hidden = true;
+function getUserGreeting(user) {
+  if (!user) return "";
+  if (user.displayName) return user.displayName.split(" ")[0];
+  if (user.email) return user.email;
+  if (user.phoneNumber) return user.phoneNumber;
+  return "User";
+}
+
+// ---------- Firebase email action links (verify/reset) ----------
+function getDefaultAuthActionUrl() {
+  // Firebase hosts the action handler and then redirects to this URL after completion.
+  const origin = window.location.origin;
+  if (!origin || origin === "null") return "http://localhost:5500/login.html";
+  return `${origin}/login.html`;
+}
+
+function getActionCodeSettings() {
+  return {
+    url: getDefaultAuthActionUrl(),
+    handleCodeInApp: false
+  };
+}
+
+// ---------- Firebase (Auth) ----------
+// CHANGE: Paste your Firebase config here (Firebase Console → Project settings → SDK setup and configuration)
+// IMPORTANT: Do not put secrets here. This config is safe to be public.
+const FIREBASE_CONFIG = {
+  // CHANGE: Filled from Firebase Console → Project settings → Your apps → Web app → firebaseConfig
+  apiKey: "AIzaSyAy804SRJsOeetR7OHA0owsBuaNnLv4wzU",
+  authDomain: "kayo-vouchers.firebaseapp.com",
+  projectId: "kayo-vouchers",
+  storageBucket: "kayo-vouchers.firebasestorage.app",
+  messagingSenderId: "982373120706",
+  appId: "1:982373120706:web:52f3eb6bcf5a499cb6195b"
+};
+
+
+let auth = null;
+let authReady = false;
+let currentUser = null;
+
+function hasFirebaseConfig() {
+  return Boolean(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.authDomain && FIREBASE_CONFIG.projectId && FIREBASE_CONFIG.appId);
+}
+
+function initFirebase() {
+  if (!hasFirebaseConfig()) {
+    // Keep site usable, but auth can’t work until config is filled.
+    console.warn("[Firebase] Missing FIREBASE_CONFIG values in script.js");
+    authReady = true;
+    currentUser = null;
+    updateNavAuthState();
+    updateProductPricingVisibility();
+    return;
+  }
+
+  if (!window.firebase?.initializeApp || !window.firebase?.auth) {
+    console.error("[Firebase] SDK not found. Ensure firebase-app-compat.js and firebase-auth-compat.js are loaded.");
+    authReady = true;
+    currentUser = null;
+    updateNavAuthState();
+    updateProductPricingVisibility();
+    return;
+  }
+
+  if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+  auth = firebase.auth();
+
+  // CHANGE: Avoid localStorage persistence for auth; use session persistence instead.
+  auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(() => {
+    // If persistence fails, Firebase falls back to its default. We still proceed.
+  });
+
+  auth.onAuthStateChanged((user) => {
+    authReady = true;
+    currentUser = user || null;
+    updateNavAuthState();
+    updateProductPricingVisibility();
+
+    // Convenience: if already logged in, keep users out of auth pages.
+    const path = location.pathname.toLowerCase();
+    if (currentUser && (path.endsWith("login.html") || path.endsWith("signup.html") || path.endsWith("forgot.html"))) {
+      location.href = "index.html";
+    }
+  });
+}
+
+function isLoggedIn() {
+  return Boolean(currentUser);
+}
+
+function ensureLogoutButton(navUserEl) {
+  if (!navUserEl) return;
+  if (navUserEl.querySelector("[data-logout]")) return;
+  const btn = document.createElement("button");
+  btn.type = "button";
+  const inSideMenu = Boolean(navUserEl.closest?.(".side-menu"));
+  btn.className = inSideMenu ? "btn btn-ghost btn-block" : "btn btn-ghost btn-sm";
+  btn.textContent = "Logout";
+  btn.setAttribute("data-logout", "");
+  navUserEl.appendChild(btn);
+}
+
+function updateNavAuthState() {
+  const navUsers = $all("[data-nav-user]");
+  const navUserTexts = $all("[data-nav-user-text]");
+  const authLinks = $all("[data-auth-link]");
+
+  const loggedIn = isLoggedIn();
+  document.documentElement.setAttribute("data-auth-state", loggedIn ? "logged-in" : "logged-out");
+
+  if (loggedIn) {
+    navUsers.forEach((el) => (el.hidden = false));
+    navUserTexts.forEach((el) => (el.textContent = `Welcome, ${getUserGreeting(currentUser)}`));
+    authLinks.forEach((el) => (el.hidden = true));
+    navUsers.forEach((el) => ensureLogoutButton(el));
   } else {
-    if (navUser) navUser.hidden = true;
-    if (authLink) authLink.hidden = false;
+    navUsers.forEach((el) => {
+      el.hidden = true;
+      el.querySelector("[data-logout]")?.remove();
+    });
+    authLinks.forEach((el) => (el.hidden = false));
   }
 }
 
 function attachLogout() {
-  $all("[data-logout]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      clearSession();
-      updateNavAuthState();
-      // If user logs out on login page, stay there. On index, show feedback.
-      if (location.pathname.toLowerCase().endsWith("index.html") || location.pathname === "/") {
-        showToast("You have been logged out.");
-      }
-    });
+  // Event delegation so Logout works even when the button is injected dynamically
+  document.addEventListener("click", async (e) => {
+    const btn = e.target?.closest?.("[data-logout]");
+    if (!btn) return;
+
+    try {
+      if (auth) await auth.signOut();
+    } finally {
+      // Requirement: redirect to login page after logout
+      location.href = "login.html";
+    }
+  });
+}
+
+// ---------- Pricing visibility (auth-gated) ----------
+function updateProductPricingVisibility() {
+  const priceEls = $all(".price");
+  if (priceEls.length === 0) return;
+
+  // While auth is loading, keep prices hidden to prevent flashing protected info.
+  if (!authReady) {
+    priceEls.forEach((el) => el.classList.remove("is-ready"));
+    return;
+  }
+
+  const loggedIn = isLoggedIn();
+  priceEls.forEach((el) => {
+    if (!el.dataset.actualPrice) el.dataset.actualPrice = el.textContent.trim();
+
+    if (loggedIn) {
+      el.textContent = el.dataset.actualPrice;
+      el.classList.remove("is-locked");
+    } else {
+      el.textContent = "Login to view price";
+      el.classList.add("is-locked");
+    }
+
+    el.classList.add("is-ready");
   });
 }
 
@@ -184,50 +258,160 @@ const PRODUCT_CATALOG = {
   university: { name: "University Voucher", price: "₵ 200.00" }
 };
 
-function savePurchase(userId, purchase) {
-  const allPurchases = readStorage(STORAGE_KEYS.purchases, {});
-  const list = Array.isArray(allPurchases[userId]) ? allPurchases[userId] : [];
-  list.unshift(purchase);
-  allPurchases[userId] = list.slice(0, 10); // keep latest 10 (demo)
-  writeStorage(STORAGE_KEYS.purchases, allPurchases);
+// ---------- Order modal (index.html) ----------
+let activeOrderProductKey = null;
+let activeOrderQty = 1;
+let activeOrderUnitPriceText = "";
+
+function parsePriceAmount(priceText) {
+  const raw = String(priceText || "");
+  const amount = Number.parseFloat(raw.replace(/[^0-9.]/g, ""));
+  return Number.isFinite(amount) ? amount : NaN;
+}
+
+function getPriceCurrency(priceText) {
+  const raw = String(priceText || "").trim();
+  const currency = raw.replace(/[0-9.,\s]/g, "").trim();
+  return currency || "";
+}
+
+function updateOrderTotal() {
+  const totalEl = document.querySelector("[data-order-total]");
+  if (!totalEl) return;
+
+  const amount = parsePriceAmount(activeOrderUnitPriceText);
+  const currency = getPriceCurrency(activeOrderUnitPriceText);
+  if (!Number.isFinite(amount)) {
+    totalEl.textContent = "—";
+    return;
+  }
+
+  const total = amount * activeOrderQty;
+  totalEl.textContent = `${currency ? currency + " " : ""}${total.toFixed(2)}`;
+}
+
+function setOrderQty(nextQty) {
+  activeOrderQty = Math.max(1, Number(nextQty) || 1);
+  const qtyEl = document.querySelector("[data-qty-value]");
+  if (qtyEl) qtyEl.textContent = String(activeOrderQty);
+  updateOrderTotal();
+}
+
+function setFieldError(target, message) {
+  if (!target) return;
+  if (!message) {
+    target.hidden = true;
+    target.textContent = "";
+    return;
+  }
+  target.hidden = false;
+  target.textContent = message;
+}
+
+function isValidEmail(email) {
+  const v = String(email || "").trim();
+  if (!v) return true; // optional
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+}
+
+function openOrderModal(productKey) {
+  const overlay = document.querySelector("[data-modal-overlay]");
+  const form = document.querySelector("[data-order-form]");
+  if (!overlay || !form) return;
+
+  const product = PRODUCT_CATALOG[productKey] || { name: "Voucher", price: "" };
+  activeOrderProductKey = productKey;
+  activeOrderUnitPriceText = product.price || "";
+  setOrderQty(1);
+
+  document.querySelector("[data-order-product]")?.replaceChildren(document.createTextNode(product.name));
+  document.querySelector("[data-order-price]")?.replaceChildren(document.createTextNode(product.price));
+  updateOrderTotal();
+
+  form.reset();
+  setFieldError(document.querySelector("[data-error-phone]"), "");
+  setFieldError(document.querySelector("[data-error-email]"), "");
+
+  document.body.classList.add("is-modal-open");
+  overlay.setAttribute("aria-hidden", "false");
+  window.setTimeout(() => document.querySelector("#order-phone")?.focus?.(), 0);
+}
+
+function closeOrderModal() {
+  const overlay = document.querySelector("[data-modal-overlay]");
+  if (!overlay) return;
+  document.body.classList.remove("is-modal-open");
+  overlay.setAttribute("aria-hidden", "true");
+  activeOrderProductKey = null;
+  activeOrderUnitPriceText = "";
+  setOrderQty(1);
+}
+
+function initOrderModal() {
+  const overlay = document.querySelector("[data-modal-overlay]");
+  const closeBtn = document.querySelector("[data-modal-close]");
+  const form = document.querySelector("[data-order-form]");
+  if (!overlay || !closeBtn || !form) return;
+
+  document.querySelector("[data-qty-minus]")?.addEventListener("click", () => setOrderQty(activeOrderQty - 1));
+  document.querySelector("[data-qty-plus]")?.addEventListener("click", () => setOrderQty(activeOrderQty + 1));
+
+  closeBtn.addEventListener("click", closeOrderModal);
+
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) closeOrderModal();
+  });
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+
+    const phone = String(form.phone?.value || "").trim();
+    const email = String(form.email?.value || "").trim();
+
+    const phoneErr = document.querySelector("[data-error-phone]");
+    const emailErr = document.querySelector("[data-error-email]");
+
+    setFieldError(phoneErr, phone ? "" : "Phone number is required.");
+    setFieldError(emailErr, isValidEmail(email) ? "" : "Please enter a valid email address (or leave it blank).");
+
+    if (!phone) return;
+    if (!isValidEmail(email)) return;
+
+    const product = PRODUCT_CATALOG[activeOrderProductKey] || { name: "Voucher", price: "" };
+    const summary = `Order: ${product.name} x${activeOrderQty} (${product.price} each).`;
+    const contact = email ? ` We will contact you at ${phone} / ${email}.` : ` We will contact you at ${phone}.`;
+
+    showToast(summary + contact);
+    closeOrderModal();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && document.body.classList.contains("is-modal-open")) closeOrderModal();
+  });
 }
 
 function handleBuy(productKey) {
-  const user = getCurrentUser();
   const product = PRODUCT_CATALOG[productKey] || { name: "Voucher", price: "" };
-
-  if (!user) {
-    showToast("Please login to buy. Redirecting…");
+  if (!isLoggedIn()) {
+    showToast("Please login to continue. Redirecting…");
     window.setTimeout(() => (location.href = "login.html"), 700);
     return;
   }
 
-  // Demo: generate a fake voucher code
-  const code = `KAYO-${Math.random().toString(36).toUpperCase().slice(2, 6)}-${generateOtp().slice(0, 4)}`;
-  savePurchase(user.id, {
-    id: `p_${Date.now()}`,
-    productKey,
-    productName: product.name,
-    price: product.price,
-    code,
-    createdAt: new Date().toISOString()
-  });
-
-  showToast(`Purchase successful! Your code: ${code}`);
+  openOrderModal(productKey);
 }
 
 function initLanding() {
   // Hero CTA (Buy Now / Get Started)
   $all('[data-action="get-started"]').forEach((btn) => {
     btn.addEventListener("click", () => {
-      const user = getCurrentUser();
-      if (!user) {
+      if (!isLoggedIn()) {
         showToast("Create an account to continue. Redirecting…");
-        window.setTimeout(() => (location.href = "login.html"), 700);
+        window.setTimeout(() => (location.href = "signup.html"), 700);
         return;
       }
-      // Scroll to products when already logged in.
-      document.querySelector("#products")?.scrollIntoView({ behavior: "smooth" });
+      // NEW: Open order modal (default product) when logged in.
+      openOrderModal("bece");
     });
   });
 
@@ -241,246 +425,140 @@ function initLanding() {
   });
 }
 
-// ---------- Auth page: login/signup/forgot flows ----------
-function initAuth() {
-  const hasAuthPanels = document.querySelector("[data-auth]");
-  if (!hasAuthPanels) return;
+// ---------- Auth pages (Firebase) ----------
+function wireAuthSwitchButtons() {
+  // Buttons like: <button data-auth-switch="login-email">Email</button>
+  $all("[data-auth-switch]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const panel = btn.getAttribute("data-auth-switch");
+      if (!panel) return;
+      clearAlert();
+      setAuthPanel(panel);
+    });
+  });
+}
 
-  // If already logged in, redirect to landing page for convenience.
-  if (getCurrentUser()) {
-    location.href = "index.html";
-    return;
-  }
+function initAuthPages() {
+  const hasPanels = document.querySelector("[data-auth]");
+  if (!hasPanels) return;
 
-  // Resume any pending OTP steps (refresh-friendly)
-  const pendingSignup = readStorage(STORAGE_KEYS.pendingSignup, null);
-  if (pendingSignup?.otp && document.querySelector('[data-auth="signup-otp"]')) {
-    const hint = document.querySelector("[data-otp-hint]");
-    if (hint) hint.textContent = `Demo OTP: ${pendingSignup.otp}`;
-    setAuthPanel("signup-otp");
-  }
+  wireAuthSwitchButtons();
 
-  const pendingForgot = readStorage(STORAGE_KEYS.pendingForgot, null);
-  if (pendingForgot?.otp && document.querySelector('[data-auth="forgot-reset"]')) {
-    const hint = document.querySelector("[data-forgot-otp-hint]");
-    if (hint) hint.textContent = `Demo OTP: ${pendingForgot.otp}`;
-    setAuthPanel("forgot-reset");
-  }
-
-  // LOGIN submit (login.html)
-  const loginForm = document.querySelector('[data-auth="login"]');
-  loginForm?.addEventListener("submit", (e) => {
+  // ---------- LOGIN: Email ----------
+  const loginEmailForm = document.querySelector('[data-auth="login-email"]');
+  loginEmailForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
     clearAlert();
 
-    const form = new FormData(loginForm);
-    const identifier = String(form.get("identifier") || "");
+    if (!auth) return showAlert("Auth is not configured yet. Add Firebase config in script.js.", "error");
+
+    const form = new FormData(loginEmailForm);
+    const email = String(form.get("email") || "").trim();
     const password = String(form.get("password") || "");
 
-    const account = findAccountByIdentifier(identifier);
-    if (!account || account.password !== password) {
-      showAlert("Invalid login details. Check your email/phone and password.", "error");
-      return;
+    try {
+      const cred = await auth.signInWithEmailAndPassword(email, password);
+      const user = cred.user;
+      if (user && !user.emailVerified) {
+        await user.sendEmailVerification(getActionCodeSettings());
+        await auth.signOut();
+        showAlert("Email not verified. We resent a verification email — please verify before logging in.", "error");
+        return;
+      }
+      location.href = "index.html";
+    } catch (err) {
+      showAlert(mapFirebaseAuthError(err), "error");
     }
-
-    setSession({ userId: account.id, loggedInAt: new Date().toISOString() });
-    location.href = "index.html";
   });
 
-  // SIGNUP submit (signup.html - step 1)
-  const signupForm = document.querySelector('[data-auth="signup"]');
-  signupForm?.addEventListener("submit", (e) => {
+  // ---------- SIGNUP: Email ----------
+  const signupEmailForm = document.querySelector('[data-auth="signup-email"]');
+  signupEmailForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
     clearAlert();
 
-    const form = new FormData(signupForm);
+    if (!auth) return showAlert("Auth is not configured yet. Add Firebase config in script.js.", "error");
+
+    const form = new FormData(signupEmailForm);
     const name = String(form.get("name") || "").trim();
-    const contact = String(form.get("contact") || "").trim();
+    const email = String(form.get("email") || "").trim();
     const password = String(form.get("password") || "");
     const confirm = String(form.get("confirm") || "");
 
-    if (!name || !contact) {
-      showAlert("Please enter your name and email/phone.", "error");
-      return;
-    }
-    if (password.length < 6) {
-      showAlert("Password should be at least 6 characters (demo rule).", "error");
-      return;
-    }
-    if (password !== confirm) {
-      showAlert("Passwords do not match.", "error");
-      return;
-    }
+    if (password !== confirm) return showAlert("Passwords do not match.", "error");
 
-    const contactNormalized = normalizeIdentifier(contact);
-    const exists = getAccounts().some((a) => a.contactNormalized === contactNormalized);
-    if (exists) {
-      showAlert("An account with that email/phone already exists. Please login instead.", "error");
-      window.setTimeout(() => (location.href = "login.html"), 800);
-      return;
+    try {
+      const cred = await auth.createUserWithEmailAndPassword(email, password);
+      const user = cred.user;
+      if (user && name) await user.updateProfile({ displayName: name });
+      if (user) await user.sendEmailVerification(getActionCodeSettings());
+      await auth.signOut();
+
+      showAlert("Check your email to verify your account, then come back to login.");
+      setAuthPanel("signup-email-verify");
+    } catch (err) {
+      showAlert(mapFirebaseAuthError(err), "error");
     }
-
-    const otp = generateOtp();
-    writeStorage(STORAGE_KEYS.pendingSignup, {
-      name,
-      contact,
-      contactNormalized,
-      password,
-      otp,
-      createdAt: new Date().toISOString()
-    });
-
-    const hint = document.querySelector("[data-otp-hint]");
-    if (hint) hint.textContent = `Demo OTP: ${otp}`;
-    setAuthPanel("signup-otp");
-    showAlert("We sent an OTP to your contact (simulated). Enter it below to finish signup.");
   });
 
-  // SIGNUP OTP submit (signup.html - step 2)
-  const signupOtpForm = document.querySelector('[data-auth="signup-otp"]');
-  signupOtpForm?.addEventListener("submit", (e) => {
+  // ---------- FORGOT PASSWORD (Email) ----------
+  const forgotForm = document.querySelector('[data-auth="forgot-email"]');
+  forgotForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
     clearAlert();
 
-    const pending = readStorage(STORAGE_KEYS.pendingSignup, null);
-    if (!pending?.otp) {
-      showAlert("No pending signup found. Please try signing up again.", "error");
-      setAuthPanel("signup");
-      return;
-    }
-
-    const form = new FormData(signupOtpForm);
-    const otp = String(form.get("otp") || "").trim();
-    if (otp !== pending.otp) {
-      showAlert("Incorrect OTP. Please try again.", "error");
-      return;
-    }
-
-    const account = {
-      id: createId(),
-      name: pending.name,
-      contact: pending.contact,
-      contactNormalized: pending.contactNormalized,
-      password: pending.password,
-      createdAt: new Date().toISOString()
-    };
-
-    const accounts = getAccounts();
-    accounts.push(account);
-    setAccounts(accounts);
-    localStorage.removeItem(STORAGE_KEYS.pendingSignup);
-
-    setSession({ userId: account.id, loggedInAt: new Date().toISOString() });
-    location.href = "index.html";
-  });
-
-  // Cancel signup OTP
-  const cancelOtp = document.querySelector("[data-cancel-otp]");
-  cancelOtp?.addEventListener("click", () => {
-    localStorage.removeItem(STORAGE_KEYS.pendingSignup);
-    clearAlert();
-    setAuthPanel("signup");
-  });
-
-  // FORGOT submit (forgot.html - step 1)
-  const forgotForm = document.querySelector('[data-auth="forgot"]');
-  forgotForm?.addEventListener("submit", (e) => {
-    e.preventDefault();
-    clearAlert();
+    if (!auth) return showAlert("Auth is not configured yet. Add Firebase config in script.js.", "error");
 
     const form = new FormData(forgotForm);
-    const contact = String(form.get("contact") || "").trim();
-    const account = findAccountByIdentifier(contact);
-    if (!account) {
-      showAlert("No account found with that email/phone.", "error");
-      return;
+    const email = String(form.get("email") || "").trim();
+
+    try {
+      await auth.sendPasswordResetEmail(email, getActionCodeSettings());
+      showAlert("Password reset email sent. Check your inbox.");
+    } catch (err) {
+      showAlert(mapFirebaseAuthError(err), "error");
     }
-
-    const otp = generateOtp();
-    writeStorage(STORAGE_KEYS.pendingForgot, {
-      userId: account.id,
-      contactNormalized: account.contactNormalized,
-      otp,
-      createdAt: new Date().toISOString()
-    });
-
-    const hint = document.querySelector("[data-forgot-otp-hint]");
-    if (hint) hint.textContent = `Demo OTP: ${otp}`;
-    setAuthPanel("forgot-reset");
-    showAlert("OTP generated (simulated). Enter it below to reset your password.");
-  });
-
-  // FORGOT reset submit (forgot.html - step 2)
-  const forgotResetForm = document.querySelector('[data-auth="forgot-reset"]');
-  forgotResetForm?.addEventListener("submit", (e) => {
-    e.preventDefault();
-    clearAlert();
-
-    const pending = readStorage(STORAGE_KEYS.pendingForgot, null);
-    if (!pending?.otp || !pending?.userId) {
-      showAlert("No pending reset found. Please request a new OTP.", "error");
-      setAuthPanel("forgot");
-      return;
-    }
-
-    const form = new FormData(forgotResetForm);
-    const otp = String(form.get("otp") || "").trim();
-    const password = String(form.get("password") || "");
-    const confirm = String(form.get("confirm") || "");
-
-    if (otp !== pending.otp) {
-      showAlert("Incorrect OTP. Please try again.", "error");
-      return;
-    }
-    if (password.length < 6) {
-      showAlert("Password should be at least 6 characters (demo rule).", "error");
-      return;
-    }
-    if (password !== confirm) {
-      showAlert("Passwords do not match.", "error");
-      return;
-    }
-
-    const accounts = getAccounts();
-    const idx = accounts.findIndex((a) => a.id === pending.userId);
-    if (idx === -1) {
-      showAlert("Account no longer exists. Please sign up again.", "error");
-      localStorage.removeItem(STORAGE_KEYS.pendingForgot);
-      window.setTimeout(() => (location.href = "signup.html"), 900);
-      return;
-    }
-
-    accounts[idx] = { ...accounts[idx], password };
-    setAccounts(accounts);
-    localStorage.removeItem(STORAGE_KEYS.pendingForgot);
-
-    showAlert("Password reset successful. You can now login.");
-    window.setTimeout(() => (location.href = "login.html"), 900);
-  });
-
-  // Cancel forgot reset
-  const cancelForgot = document.querySelector("[data-cancel-forgot]");
-  cancelForgot?.addEventListener("click", () => {
-    localStorage.removeItem(STORAGE_KEYS.pendingForgot);
-    clearAlert();
-    setAuthPanel("forgot");
   });
 }
 
 // ---------- Mobile nav toggle (index.html) ----------
 function initMobileNav() {
-  const toggle = document.querySelector("[data-nav-toggle]");
-  const links = document.querySelector("[data-nav-links]");
-  if (!toggle || !links) return;
+  const toggle = document.querySelector("[data-menu-toggle]");
+  const overlay = document.querySelector("[data-menu-overlay]");
+  const menu = document.querySelector("[data-side-menu]");
+  const closeBtn = document.querySelector("[data-menu-close]");
+  if (!toggle || !overlay || !menu) return;
+
+  const openMenu = () => {
+    document.body.classList.add("is-menu-open");
+    overlay.setAttribute("aria-hidden", "false");
+    menu.setAttribute("aria-hidden", "false");
+    toggle.setAttribute("aria-expanded", "true");
+    toggle.setAttribute("aria-label", "Close menu");
+  };
+
+  const closeMenu = () => {
+    document.body.classList.remove("is-menu-open");
+    overlay.setAttribute("aria-hidden", "true");
+    menu.setAttribute("aria-hidden", "true");
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.setAttribute("aria-label", "Open menu");
+  };
 
   toggle.addEventListener("click", () => {
-    links.classList.toggle("is-open");
-    toggle.setAttribute("aria-label", links.classList.contains("is-open") ? "Close menu" : "Open menu");
+    if (document.body.classList.contains("is-menu-open")) closeMenu();
+    else openMenu();
   });
 
-  // Close after clicking a link (mobile)
-  $all("a", links).forEach((a) => {
-    a.addEventListener("click", () => links.classList.remove("is-open"));
+  closeBtn?.addEventListener("click", closeMenu);
+  overlay.addEventListener("click", closeMenu);
+
+  // Close after clicking a link in the menu
+  $all("[data-menu-link]", menu).forEach((a) => a.addEventListener("click", closeMenu));
+
+  // ESC closes
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && document.body.classList.contains("is-menu-open")) closeMenu();
   });
 }
 
@@ -500,9 +578,14 @@ function initTheme() {
 document.addEventListener("DOMContentLoaded", () => {
   setYear();
   initTheme();
+
+  // Firebase must be initialized BEFORE wiring auth UI.
+  initFirebase();
   updateNavAuthState();
   attachLogout();
+
   initMobileNav();
   initLanding();
-  initAuth();
+  initOrderModal();
+  initAuthPages();
 });

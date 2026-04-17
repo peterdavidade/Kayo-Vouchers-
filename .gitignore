@@ -1,0 +1,5 @@
+# Local env files (don’t commit secrets / per-dev config)
+.env
+.env.*.local
+.env.local
+
